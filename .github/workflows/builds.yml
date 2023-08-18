@@ -1,0 +1,112 @@
+name: Builds
+on:
+  - push
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-kernel:
+    name: Build kernel
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu-20.04
+          - ubuntu-22.04
+          - ubuntu-24.04
+          - debian-11
+          - debian-12
+        arch:
+          - arm64
+        exclude:
+          - os: debian-11
+            arch: arm64
+    runs-on:
+      - self-hosted
+      - cpu-8
+      - mem-16G
+      - disk-80G
+      - arch-${{ matrix.arch }}
+      - image-${{ matrix.os }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get install --yes \
+            bc \
+            binutils \
+            bison \
+            cpio \
+            debhelper \
+            dpkg-dev \
+            flex \
+            git \
+            kmod \
+            libelf-dev \
+            libssl-dev \
+            rsync \
+            zstd
+
+          sudo apt-get install --yes pahole || true
+
+      - name: Configure git
+        run: |
+          git config user.email "noreply@zabbly.com"
+          git config user.name "Zabbly kernel build"
+
+      - name: Generate version string
+        env:
+          PKGARCH: "${{ matrix.arch }}"
+          PKGOS: "${{ matrix.os }}"
+        run: |
+          VERSION="$(make kernelversion)-${PKGARCH}-$(date -u +%Y%m%d%H%M)-$(echo ${PKGOS} | sed "s/-//g")"
+          echo "${VERSION}"
+          echo "${VERSION}" > ../.version
+
+      - name: Update the configuration
+        run: |
+          export KDEB_PKGVERSION="$(cat ../.version)"
+
+          make oldconfig
+          git diff .config > ../linux-${KDEB_PKGVERSION}.config.diff
+          git commit --allow-empty -m "TEMP: Refresh kernel configuration" .config
+
+      - name: Prepare for the build
+        run: |
+          mv .config .config.new
+          git commit -m "TEMP: Remove config from index" .config
+          mv .config.new .config
+
+      - name: Build the kernel
+        env:
+          DEBEMAIL: "info@zabbly.com"
+          DEBFULLNAME: "Zabbly Kernel Builds"
+          KDEB_CHANGELOG_DIST: "${{ matrix.os }}"
+          KDEB_COMPRESS: "zstd"
+          PKGOS: "${{ matrix.os }}"
+        run: |
+          [ "${PKGOS}" = "debian-11" ] && export KDEB_COMPRESS="gzip"
+
+          export KDEB_PKGVERSION="$(cat ../.version)"
+          export KDEB_SOURCENAME="linux-zabbly-${KDEB_PKGVERSION}"
+
+          make deb-pkg -j16 || make deb-pkg -j16
+
+      - name: Prepare the artifacts
+        run: |
+          mkdir out/
+          mv ../linux-* out/
+
+      - name: Upload resulting build
+        uses: actions/upload-artifact@v4
+        continue-on-error: true
+        with:
+          name: ${{ matrix.os }}-${{ matrix.arch }}
+          path: out/*
