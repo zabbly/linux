@@ -1876,7 +1876,7 @@ void kernel_neon_begin(void)
 
 	put_cpu_fpsimd_context();
 }
-EXPORT_SYMBOL_GPL(kernel_neon_begin);
+EXPORT_SYMBOL(kernel_neon_begin);
 
 /*
  * kernel_neon_end(): give the CPU FPSIMD registers back to the current task
@@ -1903,7 +1903,7 @@ void kernel_neon_end(void)
 	else
 		clear_thread_flag(TIF_KERNEL_FPSTATE);
 }
-EXPORT_SYMBOL_GPL(kernel_neon_end);
+EXPORT_SYMBOL(kernel_neon_end);
 
 #ifdef CONFIG_EFI
 
