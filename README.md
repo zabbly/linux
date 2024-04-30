@@ -24,12 +24,19 @@ All commands should be run as root.
 
 ### Repository key
 
-Packages provided by the repository are signed. In order to verify the integrity of the packages, you need to import the public key. First, verify that the fin
+Packages provided by the repository are signed. In order to verify the integrity of the packages, you need to import the public key. First, verify that the fingerprint your observe on the package repository matches the one listed below: 
 
 ```sh
 curl -fsSL https://pkgs.zabbly.com/key.asc | gpg --show-keys --fingerprint
 ```
 
+Alternatively using wget (curl is not installed by default on Debian):
+
+```sh
+wget -qO- https://pkgs.zabbly.com/key.asc | gpg --show-keys --fingerprint
+```
+
+Compare that using your eyes with this authoritative fingerprint: 
 ```sh
 pub   rsa3072 2023-08-23 [SC] [expires: 2025-08-22]
       4EFC 5906 96CB 15B8 7C73  A3AD 82CC 8797 C838 DCFD
@@ -37,12 +44,19 @@ uid                      Zabbly Kernel Builds <info@zabbly.com>
 sub   rsa3072 2023-08-23 [E] [expires: 2025-08-22]
 ```
 
-If so, save the key locally:
+If they match, save the key locally:
 
 ```sh
 mkdir -p /etc/apt/keyrings/
 curl -fsSL https://pkgs.zabbly.com/key.asc -o /etc/apt/keyrings/zabbly.asc
 ```
+Alternatively using wget:
+
+```sh
+mkdir -p /etc/apt/keyrings/
+wget -q https://pkgs.zabbly.com/key.asc -O /etc/apt/keyrings/zabbly.asc
+```
+
 
 ### Stable repository
 
@@ -64,6 +78,8 @@ EOF'
 ```
 
 ### Installing the kernel
+
+First update the package list using: `apt-get update`, you should see it hit the pkgs.zabbly.com repository.  
 
 Finally, install the kernel, with: `apt-get install linux-zabbly`.
 
