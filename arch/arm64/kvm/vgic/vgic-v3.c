@@ -63,6 +63,12 @@ void vgic_v3_configure_hcr(struct kvm_vcpu *vcpu,
 	    irqs_active_outside_lrs(als)		     ||
 	    atomic_read(&vcpu->kvm->arch.vgic.active_spis))
 		cpuif->vgic_hcr |= ICH_HCR_EL2_TDIR;
+
+	trace_printk("ap0r0=%x ap1r0=%x hcr=%x vmcr=%x\n",
+		     cpuif->vgic_ap0r[0],
+		     cpuif->vgic_ap1r[0],
+		     cpuif->vgic_hcr,
+		     cpuif->vgic_vmcr);
 }
 
 static bool lr_signals_eoi_mi(u64 lr_val)

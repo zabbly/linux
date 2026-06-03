@@ -1014,6 +1014,9 @@ static void vgic_flush_lr_state(struct kvm_vcpu *vcpu)
 	list_for_each_entry(irq, &vgic_cpu->ap_list_head, ap_list) {
 		scoped_guard(raw_spinlock,  &irq->irq_lock) {
 			if (likely(vgic_target_oracle(irq) == vcpu)) {
+				trace_printk("vcpu%ld LR%d INTID %u (pending=%d active=%d)\n",
+					     vcpu->vcpu_id, count, irq->intid,
+					     irq_is_pending(irq), irq->active);
 				vgic_populate_lr(vcpu, irq, count++);
 				*host_data_ptr(last_lr_irq) = irq;
 			}
